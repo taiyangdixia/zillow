@@ -2,12 +2,11 @@
 
 import pandas as pd
 
-dic = {"哈哈": [0, 1, 2, 3],
-       "state": ["run", "run", "down", "on"]
-       }
-df = pd.DataFrame(dic, index=["小明", "小红", "xiaohua", 4], columns=["哈哈", "state"])
+df = pd.read_csv("../data/properties_2016.csv")
+print df.shape
 
-print df
-print df["state"]
+df_res = pd.read_csv("../data/sample_submission.csv")
+print df_res.shape
 
-print df.columns
+df2 = pd.read_csv("../data/join_train_2016")
+print df2.columns
