@@ -30,7 +30,7 @@ if __name__ == "__main__":
     train = train.drop("transactiondate", axis=1)
 
     regressor = xgb.XGBRegressor(n_jobs=4,
-        n_estimators=200,
+        n_estimators=80,
         objective='reg:linear',
         max_depth=5,
         learning_rate=0.2,
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     params = {
         'n_jobs': 4,
-        'n_estimators': 200, # 多少个树
+        'n_estimators': 80, # 多少个树
         'objective': 'reg:linear',
         'max_depth': 5,
         'eta': 0.2,
@@ -63,8 +63,8 @@ if __name__ == "__main__":
     xgtrain = xgb.DMatrix(train.values, target.values)
 
     # cvresult = xgb.cv(regressor.get_xgb_params(), xgtrain, num_boost_round=regressor.get_params()["n_estimators"], nfold=5, folds=5, shuffle=True)
-
     # print "cv result => ", cvresult
+
     regressor.fit(train, target, eval_metric='mae')
 
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
@@ -76,6 +76,7 @@ if __name__ == "__main__":
     print "test shape:", test.shape
 
     testParcelid = test["parcelid"]
+
     # train = train.drop(labels=["censustractandblock", "logerror", "transactiondate"], axis=1)
     test = test.drop("parcelid", axis=1)
 
@@ -83,6 +84,19 @@ if __name__ == "__main__":
     testDMatrix = test
     predict_result = regressor.predict(testDMatrix)
 
-    stacked_result = np.hstack((testParcelid, predict_result))
-    print stacked_result.shape
-    type(stacked_result)
+    # predict_result = np.absolute(predict_result)
+    print predict_result.shape
+
+    predict_result = np.around(predict_result, decimals=4)
+    print predict_result[:2]
+
+    temp2 = np.vstack((predict_result, predict_result))
+    print temp2.shape
+    temp3 = np.vstack((temp2, predict_result))
+    print temp3.shape
+    predict_result = np.transpose(np.vstack((temp3, temp3)))
+
+    resultDF = pd.DataFrame(predict_result, index=testParcelid, columns=["201610", "201611", "201612", "201710", "201711", "201712"])
+
+    resultDF.to_csv("../data/predict_result.csv")
+    print "done"
