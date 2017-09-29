@@ -17,9 +17,11 @@ import xgboost as xgb
 
 if __name__ == "__main__":
 
+    drop_feature = []
+    code_feature = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
     # 读取训练集数据
     train = pd.read_csv("../data/join_train_2016", parse_dates=["transactiondate"], low_memory=False)#, dtype={"hashottuborspa": np., propertycountylandusecode, propertyzoningdesc, fireplaceflag, taxdelinquencyflag"})
-
+    train = train.drop(drop_feature, axis=1)
     print train.shape
 
     # 去除一些预测不准的点，尽量拟合logerror比较小的点
@@ -47,10 +49,11 @@ if __name__ == "__main__":
     # col = train.columns
     # for c in col
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
+    test = test.drop(drop_feature, axis=1)
     test = test.fillna(-999)
 
     print "test shape:", test.shape
-    for col in ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]:
+    for col in code_feature:
         encoder = LabelEncoder()
         encoder.fit(test[col])
         train[col] = encoder.transform(train[col])
@@ -75,7 +78,8 @@ if __name__ == "__main__":
 
     regressor.fit(train, target, eval_metric='mae')
 
-
+    feature_importance = sorted(zip(train.columns, regressor.feature_importances_))
+    print feature_importance
 
     testParcelid = test["parcelid"]
 
