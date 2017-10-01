@@ -11,14 +11,20 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+
 from sklearn.preprocessing import LabelEncoder
+from feature.feature_process import feature_process
 
 import xgboost as xgb
+
 
 if __name__ == "__main__":
 
     drop_feature = []
     code_feature = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
+
+    # fp = feature_process()
     # 读取训练集数据
     train = pd.read_csv("../data/join_train_2016", parse_dates=["transactiondate"], low_memory=False)#, dtype={"hashottuborspa": np., propertycountylandusecode, propertyzoningdesc, fireplaceflag, taxdelinquencyflag"})
     train = train.drop(drop_feature, axis=1)
@@ -27,6 +33,7 @@ if __name__ == "__main__":
     # 去除一些预测不准的点，尽量拟合logerror比较小的点
     train = train[train["logerror"] > -0.4]
     train = train[train["logerror"] < 0.419]
+    # train = fp.process(train)
 
     # 训练数据空值填充-999
     train = train.fillna(-999)
@@ -37,12 +44,15 @@ if __name__ == "__main__":
 
     train = train.drop("transactiondate", axis=1)
 
-    regressor = xgb.XGBRegressor(n_jobs=4,
-        n_estimators=73,
+    regressor = xgb.XGBRegressor(
+        n_estimators=200,
         objective='reg:linear',
         max_depth=5,
-        learning_rate=0.1,
+        eta=0.05,
+        learning_rate=0.05,
         min_child_weight=2,
+        subsample=0.7,
+        colsample_bytree=0.7,
         eval_metric='mae',
         missing=-999)
 
@@ -50,14 +60,17 @@ if __name__ == "__main__":
     # for c in col
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
     test = test.drop(drop_feature, axis=1)
+    # test = fp.process(test)
+
     test = test.fillna(-999)
 
     print "test shape:", test.shape
     for col in code_feature:
-        encoder = LabelEncoder()
-        encoder.fit(test[col])
-        train[col] = encoder.transform(train[col])
-        test[col] = encoder.transform(test[col])
+        if test[col].dtype == "object":
+            encoder = LabelEncoder()
+            encoder.fit(test[col])
+            train[col] = encoder.transform(train[col])
+            test[col] = encoder.transform(test[col])
 
     target = train['logerror']
     print train.shape
@@ -78,8 +91,13 @@ if __name__ == "__main__":
 
     regressor.fit(train, target, eval_metric='mae')
 
-    feature_importance = sorted(zip(train.columns, regressor.feature_importances_))
+    print "fscore: ",
+    feature_importance = pd.Series(regressor.get_booster().get_fscore()).sort_values(ascending=False)
     print feature_importance
+
+    feature_importance.plot(kind="bar", title="Feature importances")
+    plt.ylabel("feature importance score")
+
 
     testParcelid = test["parcelid"]
 
