@@ -24,7 +24,7 @@ if __name__ == "__main__":
     drop_feature = []
     code_feature = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
 
-    # fp = feature_process()
+    fp = feature_process()
     # 读取训练集数据
     train = pd.read_csv("../data/join_train_2016", parse_dates=["transactiondate"], low_memory=False)#, dtype={"hashottuborspa": np., propertycountylandusecode, propertyzoningdesc, fireplaceflag, taxdelinquencyflag"})
     train = train.drop(drop_feature, axis=1)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # 去除一些预测不准的点，尽量拟合logerror比较小的点
     train = train[train["logerror"] > -0.4]
     train = train[train["logerror"] < 0.419]
-    # train = fp.process(train)
+    train = fp.process(train)
 
     # 训练数据空值填充-999
     train = train.fillna(-999)
@@ -47,10 +47,10 @@ if __name__ == "__main__":
     regressor = xgb.XGBRegressor(
         n_estimators=200,
         objective='reg:linear',
-        max_depth=5,
+        max_depth=6,
         eta=0.05,
         learning_rate=0.05,
-        min_child_weight=2,
+        min_child_weight=3,
         subsample=0.7,
         colsample_bytree=0.7,
         eval_metric='mae',
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     # for c in col
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
     test = test.drop(drop_feature, axis=1)
-    # test = fp.process(test)
+    test = fp.process(test)
 
     test = test.fillna(-999)
 
