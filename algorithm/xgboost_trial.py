@@ -22,18 +22,23 @@ import xgboost as xgb
 if __name__ == "__main__":
 
     drop_feature = []
+    # ["fips", 'yardbuildingsqft26', 'finishedsquarefeet13', 'N-LivingAreaError', 'threequarterbathnbr',
+    #                 'airconditioningtypeid', 'pooltypeid7', 'pooltypeid10', 'basementsqft']
     code_feature = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
 
-    fp = feature_process()
+    # fp = feature_process()
     # 读取训练集数据
     train = pd.read_csv("../data/join_train_2016", parse_dates=["transactiondate"], low_memory=False)#, dtype={"hashottuborspa": np., propertycountylandusecode, propertyzoningdesc, fireplaceflag, taxdelinquencyflag"})
-    train = train.drop(drop_feature, axis=1)
     print train.shape
 
     # 去除一些预测不准的点，尽量拟合logerror比较小的点
-    train = train[train["logerror"] > -0.4]
-    train = train[train["logerror"] < 0.419]
-    train = fp.process(train)
+    train = train[train["logerror"] > -0.0356]
+    train = train[train["logerror"] < 0.0497]
+    print "before process => ", train.shape
+    # train = fp.process(train)
+    print "after process => ", train.shape
+
+    train = train.drop(drop_feature, axis=1)
 
     # 训练数据空值填充-999
     train = train.fillna(-999)
@@ -45,9 +50,9 @@ if __name__ == "__main__":
     train = train.drop("transactiondate", axis=1)
 
     regressor = xgb.XGBRegressor(
-        n_estimators=200,
+        n_estimators=300,
         objective='reg:linear',
-        max_depth=6,
+        max_depth=5,
         eta=0.05,
         learning_rate=0.05,
         min_child_weight=3,
@@ -59,8 +64,8 @@ if __name__ == "__main__":
     # col = train.columns
     # for c in col
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
+    # test = fp.process(test)
     test = test.drop(drop_feature, axis=1)
-    test = fp.process(test)
 
     test = test.fillna(-999)
 
@@ -95,8 +100,11 @@ if __name__ == "__main__":
     feature_importance = pd.Series(regressor.get_booster().get_fscore()).sort_values(ascending=False)
     print feature_importance
 
-    feature_importance.plot(kind="bar", title="Feature importances")
+    fig, ax = plt.subplots(figsize=(20, 18))
+    feature_importance.plot(kind="barh", title="Feature importances", ax=ax, x="feature",
+                            y="feature importance score")
     plt.ylabel("feature importance score")
+    plt.show()
 
 
     testParcelid = test["parcelid"]

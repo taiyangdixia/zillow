@@ -54,8 +54,8 @@ class feature_process:
         dataFrame['N-TaxScore'] = dataFrame['taxvaluedollarcnt'] * dataFrame['taxamount']
 
         # polnomials of tax delinquency year
-        dataFrame["N-taxdelinquencyyear-2"] = dataFrame["taxdelinquencyyear"] ** 2
-        dataFrame["N-taxdelinquencyyear-3"] = dataFrame["taxdelinquencyyear"] ** 3
+        # dataFrame["N-taxdelinquencyyear-2"] = dataFrame["taxdelinquencyyear"] ** 2
+        # dataFrame["N-taxdelinquencyyear-3"] = dataFrame["taxdelinquencyyear"] ** 3
 
         # Length of time since unpaid taxes
         dataFrame['N-life'] = 2018 - dataFrame['taxdelinquencyyear']
