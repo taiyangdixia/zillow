@@ -21,21 +21,22 @@ import xgboost as xgb
 
 if __name__ == "__main__":
 
-    drop_feature = []
+    drop_feature = ["censustractandblock"]#["fireplaceflag", "typeconstructiontypeid", "regionidcounty", "storytypeid"]
     # ["fips", 'yardbuildingsqft26', 'finishedsquarefeet13', 'N-LivingAreaError', 'threequarterbathnbr',
     #                 'airconditioningtypeid', 'pooltypeid7', 'pooltypeid10', 'basementsqft']
-    code_feature = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
+    code_feature = ["fireplaceflag", "hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "taxdelinquencyflag"]
 
-    # fp = feature_process()
+    fp = feature_process()
     # 读取训练集数据
     train = pd.read_csv("../data/join_train_2016", parse_dates=["transactiondate"], low_memory=False)#, dtype={"hashottuborspa": np., propertycountylandusecode, propertyzoningdesc, fireplaceflag, taxdelinquencyflag"})
     print train.shape
 
     # 去除一些预测不准的点，尽量拟合logerror比较小的点
-    train = train[train["logerror"] > -0.0356]
-    train = train[train["logerror"] < 0.0497]
+    train = train[train["logerror"] > -0.4]
+    train = train[train["logerror"] < 0.419]
     print "before process => ", train.shape
-    # train = fp.process(train)
+    
+    train = fp.process(train)
     print "after process => ", train.shape
 
     train = train.drop(drop_feature, axis=1)
@@ -50,12 +51,12 @@ if __name__ == "__main__":
     train = train.drop("transactiondate", axis=1)
 
     regressor = xgb.XGBRegressor(
-        n_estimators=300,
+        n_estimators=200,
         objective='reg:linear',
         max_depth=5,
         eta=0.05,
         learning_rate=0.05,
-        min_child_weight=3,
+        min_child_weight=2,
         subsample=0.7,
         colsample_bytree=0.7,
         eval_metric='mae',
@@ -64,12 +65,11 @@ if __name__ == "__main__":
     # col = train.columns
     # for c in col
     test = pd.read_csv("../data/properties_2016.csv", low_memory=False)
-    # test = fp.process(test)
+    test = fp.process(test)
     test = test.drop(drop_feature, axis=1)
 
     test = test.fillna(-999)
 
-    print "test shape:", test.shape
     for col in code_feature:
         if test[col].dtype == "object":
             encoder = LabelEncoder()
@@ -78,8 +78,8 @@ if __name__ == "__main__":
             test[col] = encoder.transform(test[col])
 
     target = train['logerror']
-    print train.shape
     train = train.drop(["parcelid", "logerror"], axis=1)
+    print "用于训练的train shape => ", train.shape
     xgtrain = xgb.DMatrix(train.values, target.values)
 
     cvresult = xgb.cv(regressor.get_xgb_params(), xgtrain, num_boost_round=regressor.get_params()["n_estimators"], nfold=5, folds=5, shuffle=True)
@@ -96,15 +96,16 @@ if __name__ == "__main__":
 
     regressor.fit(train, target, eval_metric='mae')
 
-    print "fscore: ",
+    print "fscore: ", type(regressor.get_booster().get_fscore())
     feature_importance = pd.Series(regressor.get_booster().get_fscore()).sort_values(ascending=False)
     print feature_importance
 
-    fig, ax = plt.subplots(figsize=(20, 18))
-    feature_importance.plot(kind="barh", title="Feature importances", ax=ax, x="feature",
+    plt.figure(figsize=(20, 18))
+    feature_importance.plot(kind="barh", title="Feature importances", legend=False, x="feature",
                             y="feature importance score")
     plt.ylabel("feature importance score")
     plt.show()
+    plt.close()
 
 
     testParcelid = test["parcelid"]
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     # train = train.drop(labels=["censustractandblock", "logerror", "transactiondate"], axis=1)
     test = test.drop("parcelid", axis=1)
 
-    print type(test.values)
+    print "用于预测的test shape:", test.shape
     testDMatrix = test
     predict_result_tmp = regressor.predict(testDMatrix)
     predict_result_tmp = predict_result_tmp.astype(np.float64)
